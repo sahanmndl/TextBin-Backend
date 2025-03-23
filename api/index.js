@@ -17,6 +17,7 @@ app.use(helmet());
 app.use(rateLimiter);
 app.use(express.json({limit: "30mb", extended: true}));
 
+app.get("/", (req, res) => res.send("Express on Vercel"));
 app.use("/api/v1/documents", documentRoutes);
 
 app.listen((process.env.PORT || 8008), async () => {
