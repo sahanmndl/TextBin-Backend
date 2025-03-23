@@ -2,11 +2,11 @@ import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import {logger} from "./config/logger.js";
-import {rateLimiter} from "./config/rateLimiter.js";
-import {connectToCacheDB} from "./config/cache.js";
-import {connectToDatabase} from "./config/database.js";
-import documentRoutes from "./routes/DocumentRoute.js";
+import {rateLimiter} from "../config/rateLimiter.js";
+import documentRoutes from "../routes/DocumentRoute.js";
+import {connectToDatabase} from "../config/database.js";
+import {connectToCacheDB} from "../config/cache.js";
+import {logger} from "../config/logger.js";
 
 dotenv.config()
 

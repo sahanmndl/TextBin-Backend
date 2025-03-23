@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
 import {logger} from "./logger.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export const connectToDatabase = async () => {
     try {
