@@ -2,13 +2,14 @@ import DocumentModel from "../models/DocumentModel.js";
 import {generateRandomString} from "../utils/strings.js";
 import {isAfter} from "date-fns";
 import {logger} from "../config/logger.js";
-import {privacyStatus, redisKeys} from '../utils/constants.js';
+import {privacyStatus, redisKeys, logTypes} from '../utils/constants.js';
 import bcrypt from "bcrypt";
 import {decryptText, encryptText, generateEncryptionKey} from "../utils/encryption.js";
 import {createKey} from "./KeyService.js";
+import {createLog} from "./LogService.js";
 import {deleteDataFromCache, getDataFromCache, setDataInCache} from "../config/cache.js";
 
-export const createDocument = async ({data}) => {
+export const createDocument = async ({data, ip}) => {
     try {
         let hashedPassword = null;
         if (data.passwordStatus?.isPasswordProtected && data.passwordStatus.password && data.privacy === privacyStatus.PRIVATE) {
@@ -50,6 +51,12 @@ export const createDocument = async ({data}) => {
             cacheKey: `${redisKeys.DOCUMENT}:${document?.readCode}`,
             expiry: 600,
             data: document
+        });
+
+        await addToLog({
+            documentId: document._id,
+            type: logTypes.CREATE,
+            ipAddress: ip
         });
 
         if (data.isEncrypted) {
@@ -113,18 +120,31 @@ export const updateDocument = async (
 }
 
 export const updateDocumentByUser = async (
-    {id, updateCode, title, content, active, tags, type, syntax, privacy, expiryStatus, passwordStatus}
+    {id, updateCode, title, content, active, tags, type, syntax, privacy, expiryStatus, passwordStatus, ip}
 ) => {
     try {
         const document = await fetchDocumentById(id);
 
-        if (document?.updateCode !== updateCode) {
+        if (document?.updateCode !== updateCode || !document?.active) {
             throw new Error("Unable to update document");
         }
+        if (document?.isEncrypted === true) {
+            throw new Error("Cannot update encrypted document");
+        }
 
-        return await updateDocument({
+        const updatedDocument = await updateDocument({
             id, title, content, active, tags, type, syntax, privacy, expiryStatus, passwordStatus
         });
+
+        await addToLog({
+            documentId: id,
+            type: logTypes.UPDATE,
+            ipAddress: ip,
+            oldDocument: document,
+            newDocument: updatedDocument
+        });
+
+        return updatedDocument;
     } catch (e) {
         throw new Error(`Error updating document: ${e.message}`);
     }
@@ -324,7 +344,7 @@ export const fetchDocuments = async (
     }
 }
 
-export const deleteDocumentByUser = async ({id, readCode, updateCode}) => {
+export const deleteDocumentByUser = async ({id, readCode, updateCode, ip}) => {
     try {
         const document = await fetchDocumentById(id);
 
@@ -338,6 +358,11 @@ export const deleteDocumentByUser = async ({id, readCode, updateCode}) => {
         });
 
         await deleteDataFromCache({cacheKey: `${redisKeys.DOCUMENT}:${readCode}`});
+        await addToLog({
+            documentId: document._id,
+            type: logTypes.DELETE,
+            ipAddress: ip
+        });
 
         return "Document deleted";
     } catch (e) {
@@ -381,5 +406,29 @@ const updateDocumentViews = async (id) => {
         return document.views;
     } catch (e) {
         logger.error("Error updating document views", e.message);
+    }
+}
+
+const addToLog = async ({documentId, type, ipAddress, oldDocument, newDocument}) => {
+    try {
+        const oldData = {
+            title: oldDocument?.title,
+            content: oldDocument?.content,
+        }
+
+        const newData = {
+            title: newDocument?.title,
+            content: newDocument?.content,
+        }
+
+        return await createLog({
+            documentId: documentId,
+            type: type,
+            ipAddress: ipAddress,
+            oldData: oldData,
+            newData: newData,
+        });
+    } catch (e) {
+        logger.error("Error adding log", e);
     }
 }

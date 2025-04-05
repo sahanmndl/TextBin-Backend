@@ -11,7 +11,7 @@ import {connectToCacheDB} from "./config/cache.js";
 dotenv.config()
 
 const app = express();
-// app.set('trust proxy', 1)
+app.set('trust proxy', true);
 app.use(cors());
 app.use(helmet());
 app.use(rateLimiter);

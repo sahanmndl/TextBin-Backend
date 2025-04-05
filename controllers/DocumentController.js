@@ -10,7 +10,8 @@ import {
 export const newDocument = async (req, res, next) => {
     try {
         const data = req.body;
-        const response = await createDocument({data});
+        const ip = req.ip;
+        const response = await createDocument({data, ip});
 
         return res.status(201).json(successAPIResponse(response));
     } catch (e) {
@@ -22,7 +23,8 @@ export const newDocument = async (req, res, next) => {
 export const editDocument = async (req, res, next) => {
     try {
         const updateData = req.body;
-        const response = await updateDocumentByUser({...updateData});
+        const ip = req.ip;
+        const response = await updateDocumentByUser({...updateData, ip});
 
         if (!response) {
             return res.status(404).json(errorAPIResponse("Document not found"));
@@ -110,7 +112,8 @@ export const getDocuments = async (req, res, next) => {
 export const deleteDocument = async (req, res, next) => {
     try {
         const {id, readCode, updateCode} = req.body;
-        const response = await deleteDocumentByUser({id, readCode, updateCode});
+        const ip = req.ip;
+        const response = await deleteDocumentByUser({id, readCode, updateCode, ip});
         return res.status(200).json(successAPIResponse(response));
     } catch (e) {
         logger.error("Error in deleteDocument " + e.message);
