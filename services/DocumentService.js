@@ -2,10 +2,11 @@ import DocumentModel from "../models/DocumentModel.js";
 import {generateRandomString} from "../utils/strings.js";
 import {isAfter} from "date-fns";
 import {logger} from "../config/logger.js";
-import {privacyStatus} from '../utils/constants.js';
+import {privacyStatus, redisKeys} from '../utils/constants.js';
 import bcrypt from "bcrypt";
 import {decryptText, encryptText, generateEncryptionKey} from "../utils/encryption.js";
 import {createKey} from "./KeyService.js";
+import {deleteDataFromCache, getDataFromCache, setDataInCache} from "../config/cache.js";
 
 export const createDocument = async ({data}) => {
     try {
@@ -44,6 +45,12 @@ export const createDocument = async ({data}) => {
         });
 
         await document.save();
+
+        await setDataInCache({
+            cacheKey: `${redisKeys.DOCUMENT}:${document?.readCode}`,
+            expiry: 600,
+            data: document
+        });
 
         if (data.isEncrypted) {
             await createKey({documentId: document._id, encryptionKey: encryptionKey});
@@ -85,13 +92,39 @@ export const updateDocument = async (
             };
         }
 
-        return await DocumentModel.findByIdAndUpdate(
+        const updatedDocument = await DocumentModel.findByIdAndUpdate(
             id,
             updateBody,
             {new: true, runValidators: true}
         )
             .lean()
             .exec();
+
+        await setDataInCache({
+            cacheKey: `${redisKeys.DOCUMENT}:${updatedDocument?.readCode}`,
+            expiry: 600,
+            data: updatedDocument
+        });
+
+        return updatedDocument;
+    } catch (e) {
+        throw new Error(`Error updating document: ${e.message}`);
+    }
+}
+
+export const updateDocumentByUser = async (
+    {id, updateCode, title, content, active, tags, type, syntax, privacy, expiryStatus, passwordStatus}
+) => {
+    try {
+        const document = await fetchDocumentById(id);
+
+        if (document?.updateCode !== updateCode) {
+            throw new Error("Unable to update document");
+        }
+
+        return await updateDocument({
+            id, title, content, active, tags, type, syntax, privacy, expiryStatus, passwordStatus
+        });
     } catch (e) {
         throw new Error(`Error updating document: ${e.message}`);
     }
@@ -137,15 +170,25 @@ export const fetchDocumentPrivacyStatus = async ({readCode}) => {
 
 export const fetchDocumentByReadCode = async ({readCode, password, decryptionKey}) => {
     try {
-        const document = await DocumentModel.findOne({
-            active: true,
-            readCode: readCode
-        })
-            .lean()
-            .exec();
+        let document = await getDataFromCache({cacheKey: `${redisKeys.DOCUMENT}:${readCode}`});
 
         if (!document) {
-            throw new Error("Document not found");
+            document = await DocumentModel.findOne({
+                active: true,
+                readCode: readCode
+            })
+                .lean()
+                .exec();
+
+            if (!document) {
+                throw new Error("Document not found");
+            }
+
+            await setDataInCache({
+                cacheKey: `${redisKeys.DOCUMENT}:${readCode}`,
+                expiry: 300,
+                data: document
+            });
         }
 
         if (document?.expiryStatus) {
@@ -256,7 +299,7 @@ export const fetchDocuments = async (
 
         const documents = await DocumentModel
             .find(query)
-            .select("_id title type views readCode createdAt")
+            .select("-_id title type tags views readCode createdAt")
             .sort(sort)
             .skip(skip)
             .limit(limit)
@@ -281,12 +324,21 @@ export const fetchDocuments = async (
     }
 }
 
-export const deleteDocumentById = async (id) => {
+export const deleteDocumentByUser = async ({id, readCode, updateCode}) => {
     try {
+        const document = await fetchDocumentById(id);
+
+        if (document?.updateCode !== updateCode) {
+            throw new Error("Unable to delete document");
+        }
+
         await updateDocument({
             id: id,
             active: false
         });
+
+        await deleteDataFromCache({cacheKey: `${redisKeys.DOCUMENT}:${readCode}`});
+
         return "Document deleted";
     } catch (e) {
         throw new Error(`Error deleting document: ${e.message}`);

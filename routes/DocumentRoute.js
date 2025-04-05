@@ -33,6 +33,7 @@ const schemas = {
     }),
     editDocument: joi.object().keys({
         id: joi.string().required(),
+        updateCode: joi.string().required(),
         title: joi.string().min(0).max(256),
         content: joi.string().min(1),
         active: joi.boolean(),
@@ -71,19 +72,18 @@ const schemas = {
     }),
     deleteDocument: joi.object().keys({
         id: joi.string().required(),
-    }),
-    incrementDocumentViews: joi.object().keys({
-        id: joi.string().required(),
+        readCode: joi.string().required(),
+        updateCode: joi.string().required(),
     }),
 };
 
 documentRoutes.post("/", schemaValidation(schemas.newDocument, "body"), newDocument);
 documentRoutes.put("/", schemaValidation(schemas.editDocument, "body"), editDocument);
-documentRoutes.get("/get/:id", schemaValidation(schemas.getDocumentById, "params"), getDocumentById);
+// documentRoutes.get("/get/:id", schemaValidation(schemas.getDocumentById, "params"), getDocumentById);
 documentRoutes.get("/status/:code", schemaValidation(schemas.getDocumentPrivacyStatus, "params"), getDocumentPrivacyStatus);
 documentRoutes.get("/read/:code", schemaValidation(schemas.getDocumentByReadCode, "params"), getDocumentByReadCode);
 documentRoutes.get("/update/:code", schemaValidation(schemas.getDocumentByUpdateCode, "params"), getDocumentByUpdateCode);
 documentRoutes.get("/", schemaValidation(schemas.getDocuments, "query"), getDocuments);
-documentRoutes.delete("/:id", schemaValidation(schemas.deleteDocument, "params"), deleteDocument);
+documentRoutes.post("/delete", schemaValidation(schemas.deleteDocument, "body"), deleteDocument);
 
 export default documentRoutes;

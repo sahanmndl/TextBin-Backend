@@ -1,10 +1,10 @@
 import {errorAPIResponse, successAPIResponse} from "../utils/response.js";
 import {logger} from "../config/logger.js";
 import {
-    createDocument, deleteDocumentById,
+    createDocument, deleteDocumentByUser,
     fetchDocumentById,
     fetchDocumentByReadCode, fetchDocumentByUpdateCode, fetchDocumentPrivacyStatus, fetchDocuments,
-    updateDocument
+    updateDocumentByUser
 } from "../services/DocumentService.js";
 
 export const newDocument = async (req, res, next) => {
@@ -22,7 +22,7 @@ export const newDocument = async (req, res, next) => {
 export const editDocument = async (req, res, next) => {
     try {
         const updateData = req.body;
-        const response = await updateDocument({...updateData});
+        const response = await updateDocumentByUser({...updateData});
 
         if (!response) {
             return res.status(404).json(errorAPIResponse("Document not found"));
@@ -109,8 +109,8 @@ export const getDocuments = async (req, res, next) => {
 
 export const deleteDocument = async (req, res, next) => {
     try {
-        const {id} = req.params;
-        const response = await deleteDocumentById(id);
+        const {id, readCode, updateCode} = req.body;
+        const response = await deleteDocumentByUser({id, readCode, updateCode});
         return res.status(200).json(successAPIResponse(response));
     } catch (e) {
         logger.error("Error in deleteDocument " + e.message);

@@ -13,4 +13,8 @@ export const privacyStatus = {
     PRIVATE: "PRIVATE"
 }
 
+export const redisKeys = {
+    DOCUMENT: "DOCUMENT",
+}
+
 export const DEFAULT_EXPIRY_DATE = new Date('2100-01-01');

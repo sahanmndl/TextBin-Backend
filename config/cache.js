@@ -32,7 +32,6 @@ export const getDataFromCache = async ({cacheKey}) => {
         return JSON.parse(cachedData);
     } catch (e) {
         logger.error("Error in getDataFromCache " + e);
-        throw e;
     }
 }
 
@@ -42,6 +41,48 @@ export const setDataInCache = async ({cacheKey, expiry, data}) => {
         return await redisClient.setEx(cacheKey, expiry, JSON.stringify(data));
     } catch (e) {
         logger.error("Error in setDataInCache " + e);
-        throw e;
+    }
+}
+
+export const deleteDataFromCache = async ({cacheKey}) => {
+    try {
+        logger.info(`Deleting cache key: ${cacheKey}`);
+
+        const result = await redisClient.del(cacheKey);
+
+        if (result === 1) {
+            logger.info(`Successfully deleted cache key: ${cacheKey}`);
+            return true;
+        } else {
+            logger.warn(`Cache key not found: ${cacheKey}`);
+            return false;
+        }
+    } catch (e) {
+        logger.error("Error in deleteDataFromCache " + e);
+    }
+}
+
+export const increaseCacheTTL = async ({cacheKey, increaseBy}) => {
+    try {
+        logger.info(`Increasing TTL of cache key: ${cacheKey} by ${increaseBy} seconds`);
+
+        const currentTTL = await redisClient.ttl(cacheKey);
+
+        if (currentTTL === -2) {
+            logger.warn(`Key ${cacheKey} does not exist`);
+            return null;
+        }
+
+        if (currentTTL === -1) {
+            logger.warn(`Key ${cacheKey} exists but has no expiration set`);
+            return null;
+        }
+
+        const newTTL = currentTTL + increaseBy;
+        await redisClient.expire(cacheKey, newTTL);
+
+        logger.info(`TTL of key ${cacheKey} is now ${newTTL} seconds`);
+    } catch (e) {
+        logger.error("Error in increaseCacheTTL " + e);
     }
 }

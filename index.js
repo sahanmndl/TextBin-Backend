@@ -17,10 +17,19 @@ app.use(helmet());
 app.use(rateLimiter);
 app.use(express.json({limit: "30mb", extended: true}));
 
+app.get('/', (req, res) => {
+    try {
+        res.status(200).send("TextBin is up and running 🚀");
+    } catch (e) {
+        logger.error("Server error " + e);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
 app.use("/api/v1/documents", documentRoutes);
 
 app.listen((process.env.PORT || 8008), async () => {
     logger.info("Server is running on port " + process.env.PORT);
     await connectToDatabase();
     await connectToCacheDB();
-})
+});
