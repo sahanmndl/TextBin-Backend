@@ -65,10 +65,13 @@ export const getDocumentByReadCode = async (req, res, next) => {
     try {
         const {code} = req.params;
         const {password, key} = req.query;
+        const ip = req.ip;
+
         const response = await fetchDocumentByReadCode({
             readCode: code,
             password: password,
-            decryptionKey: key
+            decryptionKey: key,
+            ipAddress: ip
         });
 
         return res.status(200).json(successAPIResponse(response));

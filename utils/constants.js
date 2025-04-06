@@ -1,7 +1,8 @@
 export const collectionNames = {
     DOCUMENTS: "documents",
     KEYS: "keys",
-    LOGS: "logs"
+    LOGS: "logs",
+    REPORTS: "reports"
 }
 
 export const documentTypes = {

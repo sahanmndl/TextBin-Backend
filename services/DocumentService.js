@@ -8,6 +8,7 @@ import {decryptText, encryptText, generateEncryptionKey} from "../utils/encrypti
 import {createKey} from "./KeyService.js";
 import {createLog} from "./LogService.js";
 import {deleteDataFromCache, getDataFromCache, setDataInCache} from "../config/cache.js";
+import {checkIfAlreadyReported} from "./ReportService.js";
 
 export const createDocument = async ({data, ip}) => {
     try {
@@ -188,7 +189,7 @@ export const fetchDocumentPrivacyStatus = async ({readCode}) => {
     }
 }
 
-export const fetchDocumentByReadCode = async ({readCode, password, decryptionKey}) => {
+export const fetchDocumentByReadCode = async ({readCode, password, decryptionKey, ipAddress}) => {
     try {
         let document = await getDataFromCache({cacheKey: `${redisKeys.DOCUMENT}:${readCode}`});
 
@@ -247,6 +248,11 @@ export const fetchDocumentByReadCode = async ({readCode, password, decryptionKey
 
         await updateDocumentViews(document._id);
 
+        const report = await checkIfAlreadyReported({
+            documentId: document._id,
+            ipAddress: ipAddress,
+        });
+
         const response = {
             title: decryptedTitle,
             content: decryptedContent,
@@ -257,6 +263,7 @@ export const fetchDocumentByReadCode = async ({readCode, password, decryptionKey
             views: document.views,
             readCode: document.readCode,
             expiryStatus: document.expiryStatus,
+            isReported: !!report,
             createdAt: document.createdAt
         };
 

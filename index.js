@@ -7,6 +7,7 @@ import documentRoutes from "./routes/DocumentRoute.js";
 import {logger} from "./config/logger.js";
 import {connectToDatabase} from "./config/database.js";
 import {connectToCacheDB} from "./config/cache.js";
+import reportRoutes from "./routes/ReportRoute.js";
 
 dotenv.config()
 
@@ -27,6 +28,7 @@ app.get('/', (req, res) => {
 });
 
 app.use("/api/v1/documents", documentRoutes);
+app.use("/api/v1/reports", reportRoutes);
 
 app.listen((process.env.PORT || 8008), async () => {
     logger.info("Server is running on port " + process.env.PORT);
